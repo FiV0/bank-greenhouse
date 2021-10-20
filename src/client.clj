@@ -18,6 +18,7 @@
 (comment
   (http-get "/account/0" "application/edn")
   (http-get "/account/100" "application/edn")
+  (http-get "/account/adaa" "application/edn")
   )
 
 (defn http-post
@@ -34,4 +35,5 @@
 (comment
   (http-post "/account" {:name "Mr. Black"})
   (http-post "/account/1/deposit" {:amount "100"})
+  (http-post "/account/adafas/deposit" {:amount "100"})
   )

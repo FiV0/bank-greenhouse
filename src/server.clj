@@ -11,6 +11,12 @@
    :name name
    :balance 0})
 
+(defn try-parse-long [s]
+  (try
+    (Long/parseLong s)
+    (catch Exception _
+      nil)))
+
 (defn account-creation [{:keys [body-params] :as _req}]
   (if-not (contains? body-params :name)
     {:status 400
@@ -23,7 +29,7 @@
        :body account})))
 
 (defn account-retrieval [{:keys [params] :as _req}]
-  (if-let [account (get @accounts (Long/parseLong (:id params)))]
+  (if-let [account (get @accounts (try-parse-long (:id params)))]
     {:status 200
      :headers {}
      :body account}
@@ -32,8 +38,8 @@
      :body {:reason "No such account!!!"}}))
 
 (defn account-deposit [{:keys [params body-params] :as _req}]
-  (let [id (Long/parseLong (:id params))
-        amount (Long/parseLong (:amount body-params))
+  (let [id (try-parse-long (:id params))
+        amount (try-parse-long (:amount body-params))
         account (get @accounts id)]
     (cond
       ;; no such account
