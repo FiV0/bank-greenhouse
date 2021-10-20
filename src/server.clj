@@ -43,11 +43,21 @@
      :headers {}
      :body account-or-info}))
 
+(defn account-send [{:keys [params body-params] :as _req}]
+  (let [id (try-parse-long (:id params))
+        amount (try-parse-long (:amount body-params))
+        account-number (try-parse-long (:account-number body-params))
+        [success account-or-info] (account/account-operation id :send {:amount amount :account-number account-number})]
+    {:status (if success 200 400)
+     :headers {}
+     :body account-or-info}))
+
 (defroutes routes
   (POST "/account" [] account-creation)
   (GET "/account/:id" [] account-retrieval)
   (POST "/account/:id/deposit" [] account-deposit)
   (POST "/account/:id/withdraw" [] account-withdraw)
+  (POST "/account/:id/send" [] account-send)
   (not-found "<h1>Page not found, I am very sorry.</h1>"))
 
 (def app (middleware/wrap-format routes))
