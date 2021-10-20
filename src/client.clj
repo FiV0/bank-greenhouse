@@ -1,5 +1,6 @@
 (ns client
-  (:require [muuntaja.core :as m]
+  (:require [clojure.string :as str]
+            [muuntaja.core :as m]
             [org.httpkit.client :as http]))
 
 (def address "http://localhost:8080")
@@ -10,31 +11,34 @@
 (defn http-get
   ([decoding] (http-get "" decoding))
   ([endpoint decoding]
-   (-> (http/get (str address endpoint) {:headers {"accept" decoding}})
-       deref
-       assoc-string-content-type
-       m/decode-response-body)))
+   (let [{:keys [headers] :as resp} @(http/get (str address endpoint) {:headers {"accept" decoding}})]
+     (if-not (str/starts-with? (:content-type headers) decoding)
+       (:body resp)
+       (-> resp assoc-string-content-type m/decode-response-body)))))
 
 (comment
   (http-get "/account/0" "application/edn")
   (http-get "/account/100" "application/edn")
   (http-get "/account/adaa" "application/edn")
+  (http-get "/garbage" "application/edn")
   )
 
 (defn http-post
   ([endpoint body] (http-post endpoint "application/json" "application/json" body))
   ([encoding decoding body] (http-post "" encoding decoding body))
   ([endpoint encoding decoding body]
-   (-> (http/post (str address endpoint) {:headers {"content-type" encoding
-                                                    "accept" decoding}
-                                          :body (m/encode encoding body)})
-       deref
-       assoc-string-content-type
-       m/decode-response-body)))
+   (let [{:keys [headers] :as resp} @(http/post (str address endpoint) {:headers {"content-type" encoding
+                                                                                  "accept" decoding}
+                                                                        :body (m/encode encoding body)}) ]
+     (if-not (str/starts-with? (:content-type headers) decoding)
+       (:body resp)
+       (-> resp assoc-string-content-type m/decode-response-body)))))
 
 (comment
   (http-post "/account" {:name "Mr. Black"})
   (http-post "/account/1/deposit" {:amount "100"})
   (http-post "/account/adafas/deposit" {:amount "100"})
   (http-post "/account/1/withdraw" {:amount "100"})
+  (http-post "/account/1/send" {:amount "100"})
+  (http-post "/garbage" {})
   )
