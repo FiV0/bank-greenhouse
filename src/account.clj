@@ -48,10 +48,11 @@
                  [false {:reason "Invalid receiving account!!!"}]
                  :else
                  (do
-                   (when (= operation :send)
-                     (swap! accounts assoc account-number
-                            (update (get @accounts account-number) :balance + amount)))
-                   (swap! accounts assoc id updated-account)
+                   (if (= operation :send)
+                     (swap! accounts assoc
+                            id updated-account
+                            account-number (update (get @accounts account-number) :balance + amount))
+                     (swap! accounts assoc id updated-account))
                    [true updated-account]))))
        (throw (Exception. "No such operation!")))
      [false {:reason "No such account!!!"}])))
