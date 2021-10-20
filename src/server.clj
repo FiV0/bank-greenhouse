@@ -1,15 +1,9 @@
 (ns server
-  (:require [compojure.core :refer [defroutes GET POST]]
+  (:require [account]
+            [compojure.core :refer [defroutes GET POST]]
             [compojure.route :refer [not-found]]
             [muuntaja.middleware :as middleware]
             [org.httpkit.server :as server]))
-
-(def accounts (atom {}))
-
-(defn new-account [name]
-  {:account-number (count @accounts)
-   :name name
-   :balance 0})
 
 (defn try-parse-long [s]
   (try
@@ -22,72 +16,32 @@
     {:status 400
      :headers {}
      :body {:reason "No name specified!!!"}}
-    (let [{:keys [account-number] :as account} (new-account (:name body-params))]
-      (swap! accounts assoc account-number account)
-      {:status 200
-       :headers {}
-       :body account})))
-
-(defn account-retrieval [{:keys [params] :as _req}]
-  (if-let [account (get @accounts (try-parse-long (:id params)))]
     {:status 200
      :headers {}
-     :body account}
-    {:status 400
+     :body (account/new-account (:name body-params))}))
+
+(defn account-retrieval [{:keys [params] :as _req}]
+  (let [id (try-parse-long (:id params))
+        [success account-or-info] (account/account-operation id :retrieval)]
+    {:status (if success 200 400)
      :headers {}
-     :body {:reason "No such account!!!"}}))
+     :body account-or-info}))
 
 (defn account-deposit [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
         amount (try-parse-long (:amount body-params))
-        account (get @accounts id)]
-    (cond
-      ;; no such account
-      (nil? account)
-      {:status 400
-       :headers {}
-       :body {:reason "No such account!!!"}}
-
-      ;; bad amount
-      (or (nil? amount) (not (number? amount)) (<= amount 0))
-      {:status 400
-       :headers {}
-       :body {:reason "No or badly specified amount!!!"}}
-
-      :else
-      (let [updated-account (update account :balance + amount)]
-        (swap! accounts assoc id updated-account)
-        {:status 200
-         :headers {}
-         :body updated-account}))))
+        [success account-or-info] (account/account-operation id :deposit {:amount amount})]
+    {:status (if success 200 400)
+     :headers {}
+     :body account-or-info}))
 
 (defn account-withdraw [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
         amount (try-parse-long (:amount body-params))
-        account (get @accounts id)]
-    (cond
-      ;; no such account
-      (nil? account)
-      {:status 400
-       :headers {}
-       :body {:reason "No such account!!!"}}
-
-      ;; bad amount
-      (or (nil? amount) (not (number? amount)) (<= amount 0))
-      {:status 400
-       :headers {}
-       :body {:reason "No or badly specified amount!!!"}}
-
-      :else
-      (let [{:keys [balance] :as updated-account} (update account :balance - amount)]
-        (if (< balance 0)
-          {:status 400
-           :headers {}
-           :body {:reason "Insufficiant balance!!!"}}
-          (do (swap! accounts assoc id updated-account)
-              {:status 200
-               :headers {}
-               :body updated-account}))))))
+        [success account-or-info] (account/account-operation id :withdraw {:amount amount})]
+    {:status (if success 200 400)
+     :headers {}
+     :body account-or-info}))
 
 (defroutes routes
   (POST "/account" [] account-creation)
