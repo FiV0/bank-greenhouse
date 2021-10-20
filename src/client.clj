@@ -36,4 +36,5 @@
   (http-post "/account" {:name "Mr. Black"})
   (http-post "/account/1/deposit" {:amount "100"})
   (http-post "/account/adafas/deposit" {:amount "100"})
+  (http-post "/account/1/withdraw" {:amount "100"})
   )

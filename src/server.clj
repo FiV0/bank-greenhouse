@@ -61,10 +61,39 @@
          :headers {}
          :body updated-account}))))
 
+(defn account-withdraw [{:keys [params body-params] :as _req}]
+  (let [id (try-parse-long (:id params))
+        amount (try-parse-long (:amount body-params))
+        account (get @accounts id)]
+    (cond
+      ;; no such account
+      (nil? account)
+      {:status 400
+       :headers {}
+       :body {:reason "No such account!!!"}}
+
+      ;; bad amount
+      (or (nil? amount) (not (number? amount)) (<= amount 0))
+      {:status 400
+       :headers {}
+       :body {:reason "No or badly specified amount!!!"}}
+
+      :else
+      (let [{:keys [balance] :as updated-account} (update account :balance - amount)]
+        (if (< balance 0)
+          {:status 400
+           :headers {}
+           :body {:reason "Insufficiant balance!!!"}}
+          (do (swap! accounts assoc id updated-account)
+              {:status 200
+               :headers {}
+               :body updated-account}))))))
+
 (defroutes routes
   (POST "/account" [] account-creation)
   (GET "/account/:id" [] account-retrieval)
   (POST "/account/:id/deposit" [] account-deposit)
+  (POST "/account/:id/withdraw" [] account-withdraw)
   (not-found "<h1>Page not found, I am very sorry.</h1>"))
 
 (def app (middleware/wrap-format routes))
