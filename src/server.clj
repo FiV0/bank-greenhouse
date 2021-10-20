@@ -4,17 +4,26 @@
             [muuntaja.middleware :as middleware]
             [org.httpkit.server :as server]))
 
-(defn handler [{:keys [request-method headers body-params] :as _req}]
-  {:status 200
-   :headers {}
-   :body (cond-> {:encoding (get headers "accept")
-                  :type request-method}
-           (= request-method :post)
-           (assoc :body body-params))})
+(def accounts (atom {}))
+
+(defn new-account [name]
+  {:account-number (count @accounts)
+   :name name
+   :balance 0})
+
+(defn account-creation [{:keys [body-params] :as _req}]
+  (if-not (contains? body-params :name)
+    {:status 400
+     :headers {}
+     :body {:reason "No name specified!!!"}}
+    (let [{:keys [account-number] :as account} (new-account (:name body-params))]
+      (swap! accounts assoc account-number account)
+      {:status 200
+       :headers {}
+       :body account})))
 
 (defroutes routes
-  (GET "/" [] handler)
-  (POST "/" [] handler)
+  (POST "/account" [] account-creation)
   (not-found "<h1>Page not found, I am very sorry.</h1>"))
 
 (def app (middleware/wrap-format routes))
