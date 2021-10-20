@@ -8,7 +8,8 @@
         account {:account-number id
                  :name name
                  :balance 0}]
-    (swap! accounts assoc id account)))
+    (swap! accounts assoc id account)
+    account))
 
 (defn amount-check [amount]
   (not (or (nil? amount) (not (number? amount)) (<= amount 0))))
