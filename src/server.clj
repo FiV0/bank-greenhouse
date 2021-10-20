@@ -29,25 +29,21 @@
 
 (defn account-deposit [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        amount (try-parse-long (:amount body-params))
-        [success account-or-info] (account/account-operation id :deposit {:amount amount})]
+        [success account-or-info] (account/account-operation id :deposit body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
 
 (defn account-withdraw [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        amount (try-parse-long (:amount body-params))
-        [success account-or-info] (account/account-operation id :withdraw {:amount amount})]
+        [success account-or-info] (account/account-operation id :withdraw body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
 
 (defn account-send [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        amount (try-parse-long (:amount body-params))
-        account-number (try-parse-long (:account-number body-params))
-        [success account-or-info] (account/account-operation id :send {:amount amount :account-number account-number})]
+        [success account-or-info] (account/account-operation id :send body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
