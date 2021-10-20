@@ -15,6 +15,11 @@
        assoc-string-content-type
        m/decode-response-body)))
 
+(comment
+  (http-get "/account/0" "application/edn")
+  (http-get "/account/100" "application/edn")
+  )
+
 (defn http-post
   ([endpoint body] (http-post endpoint "application/json" "application/json" body))
   ([encoding decoding body] (http-post "" encoding decoding body))

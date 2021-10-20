@@ -22,8 +22,18 @@
        :headers {}
        :body account})))
 
+(defn account-retrieval [{:keys [params] :as _req}]
+  (if-let [account (get @accounts (Long/parseLong (:id params)))]
+    {:status 200
+     :headers {}
+     :body account}
+    {:status 400
+     :headers {}
+     :body {:reason "No such account!!!"}}))
+
 (defroutes routes
   (POST "/account" [] account-creation)
+  (GET "/account/:id" [] account-retrieval)
   (not-found "<h1>Page not found, I am very sorry.</h1>"))
 
 (def app (middleware/wrap-format routes))
