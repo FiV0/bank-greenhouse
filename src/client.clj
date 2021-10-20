@@ -33,4 +33,5 @@
 
 (comment
   (http-post "/account" {:name "Mr. Black"})
+  (http-post "/account/1/deposit" {:amount "100"})
   )
