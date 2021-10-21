@@ -26,6 +26,7 @@
   (http-get-body "/account/100")
   (http-get-body "/account/adaa")
   (http-get-body "/garbage")
+  (http-get-body "/account/1/audit")
   )
 
 (defn http-post

@@ -22,31 +22,38 @@
 
 (defn account-retrieval [{:keys [params] :as _req}]
   (let [id (try-parse-long (:id params))
-        [success account-or-info] (account/account-operation id :retrieval)]
+        [success account-or-info] (account/wrap-account-operation id :retrieval)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
 
 (defn account-deposit [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        [success account-or-info] (account/account-operation id :deposit body-params)]
+        [success account-or-info] (account/wrap-account-operation id :deposit body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
 
 (defn account-withdraw [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        [success account-or-info] (account/account-operation id :withdraw body-params)]
+        [success account-or-info] (account/wrap-account-operation id :withdraw body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
 
 (defn account-send [{:keys [params body-params] :as _req}]
   (let [id (try-parse-long (:id params))
-        [success account-or-info] (account/account-operation id :send body-params)]
+        [success account-or-info] (account/wrap-account-operation id :send body-params)]
     {:status (if success 200 400)
      :headers {}
      :body account-or-info}))
+
+(defn account-audit [{:keys [params] :as _req}]
+  (let [id (try-parse-long (:id params))
+        [success log-or-info] (account/account-audit id)]
+    {:status (if success 200 400)
+     :headers {}
+     :body log-or-info}))
 
 (defroutes routes
   (POST "/account" [] account-creation)
@@ -54,6 +61,7 @@
   (POST "/account/:id/deposit" [] account-deposit)
   (POST "/account/:id/withdraw" [] account-withdraw)
   (POST "/account/:id/send" [] account-send)
+  (GET "/account/:id/audit" [] account-audit)
   (not-found "<h1>Page not found, I am very sorry.</h1>"))
 
 (def app (middleware/wrap-format routes))

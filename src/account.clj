@@ -2,6 +2,7 @@
   "A namespace that contains account logic.")
 
 (def accounts (atom {}))
+(def audit-log (atom {}))
 
 (defn new-account [name]
   (let [id (count @accounts)
@@ -9,6 +10,7 @@
                  :name name
                  :balance 0}]
     (swap! accounts assoc id account)
+    (swap! audit-log assoc id '())
     account))
 
 (defn amount-check [amount]
@@ -57,6 +59,39 @@
        (throw (Exception. "No such operation!")))
      [false {:reason "No such account!!!"}])))
 
+(defn- keyword->string [kw]
+  (apply str (rest (str kw))))
+
+(defn- audit-log-sequence-id [id]
+  (-> (get @audit-log id) count))
+
+(defn wrap-account-operation [& [id operation opts :as args]]
+  (let [[success :as res] (apply account-operation args)]
+    (when (and success (#{:deposit :withdraw :send} operation))
+      (let [{:keys [amount account-number]} opts]
+        (case operation
+          (:deposit :withdraw)
+          (swap! audit-log update id conj
+                 {:sequence (audit-log-sequence-id id)
+                  (if (= operation :deposit) :credit :debit) amount
+                  :description (keyword->string operation)})
+          :send
+          (do
+            (swap! audit-log update id conj
+                   {:sequence (audit-log-sequence-id id)
+                    :debit amount
+                    :description (str "receive from #" account-number)})
+            (swap! audit-log update account-number conj
+                   {:sequence (audit-log-sequence-id account-number)
+                    :credit amount
+                    :description (str "receive from #" id)})))))
+    res))
+
+(defn account-audit [id]
+  (if-let [log (get @audit-log id)]
+    [true log]
+    [false {:reason "No such account!!!"}]))
+
 (comment
   (new-account "foo")
   (account-operation 0 :retrieval)
@@ -67,5 +102,7 @@
   (account-operation 1 :adsfsadsf {:amount 100})
   (account-operation 1 :send {:amount 100 :account-number 0})
   (account-operation 1 :send {:amount 100 :account-number 100})
+
+  (account-audit 1)
 
   )
