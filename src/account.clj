@@ -80,7 +80,7 @@
             (swap! audit-log update id conj
                    {:sequence (audit-log-sequence-id id)
                     :debit amount
-                    :description (str "receive from #" account-number)})
+                    :description (str "send to #" account-number)})
             (swap! audit-log update account-number conj
                    {:sequence (audit-log-sequence-id account-number)
                     :credit amount

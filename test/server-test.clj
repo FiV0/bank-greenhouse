@@ -156,7 +156,7 @@
                  :body {:name "Mr. Black", :balance 50, :account-number 0}}
                 (client/http-post "/account/0/send" {:amount 50 :account-number 1})))
     (is (match? {:status 200
-                 :body [{:description "receive from #1", :debit 50, :sequence 2}
+                 :body [{:description "send to #1", :debit 50, :sequence 2}
                         {:description "withdraw", :debit 100, :sequence 1}
                         {:description "deposit", :sequence 0, :credit 200}]}
                 (client/http-get "/account/0/audit")))
