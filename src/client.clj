@@ -9,36 +9,45 @@
   (update res :headers #(assoc % "Content-Type" (:content-type %))))
 
 (defn http-get
-  ([decoding] (http-get "" decoding))
-  ([endpoint decoding]
-   (let [{:keys [headers] :as resp} @(http/get (str address endpoint) {:headers {"accept" decoding}})]
-     (if-not (str/starts-with? (:content-type headers) decoding)
-       (:body resp)
-       (-> resp assoc-string-content-type m/decode-response-body)))))
+  ([endpoint] (http-get address endpoint "application/json"))
+  ([address endpoint] (http-get address endpoint "application/json"))
+  ([address endpoint decoding]
+   (let [{:keys [headers] :as resp} (-> @(http/get (str address endpoint) {:headers {"accept" decoding}})
+                                        assoc-string-content-type)]
+     (cond-> resp
+       (str/starts-with? (:content-type headers) decoding)
+       (assoc :body (m/decode-response-body resp))))))
+
+(defn http-get-body [& args]
+  (:body (apply http-get args)))
 
 (comment
-  (http-get "/account/0" "application/edn")
-  (http-get "/account/100" "application/edn")
-  (http-get "/account/adaa" "application/edn")
-  (http-get "/garbage" "application/edn")
+  (http-get-body "/account/0")
+  (http-get-body "/account/100")
+  (http-get-body "/account/adaa")
+  (http-get-body "/garbage")
   )
 
 (defn http-post
-  ([endpoint body] (http-post endpoint "application/json" "application/json" body))
-  ([encoding decoding body] (http-post "" encoding decoding body))
-  ([endpoint encoding decoding body]
-   (let [{:keys [headers] :as resp} @(http/post (str address endpoint) {:headers {"content-type" encoding
-                                                                                  "accept" decoding}
-                                                                        :body (m/encode encoding body)}) ]
-     (if-not (str/starts-with? (:content-type headers) decoding)
-       (:body resp)
-       (-> resp assoc-string-content-type m/decode-response-body)))))
+  ([endpoint body] (http-post address endpoint "application/json" "application/json" body))
+  ([address endpoint body] (http-post address endpoint "application/json" "application/json" body))
+  ([address endpoint encoding decoding body]
+   (let [{:keys [headers] :as resp} (-> @(http/post (str address endpoint) {:headers {"content-type" encoding
+                                                                                      "accept" decoding}
+                                                                            :body (m/encode encoding body)})
+                                        assoc-string-content-type)]
+     (cond-> resp
+       (str/starts-with? (:content-type headers) decoding)
+       (assoc :body (m/decode-response-body resp))))))
+
+(defn http-post-body [& args]
+  (:body (apply http-post args)))
 
 (comment
-  (http-post "/account" {:name "Mr. Black"})
-  (http-post "/account/1/deposit" {:amount 100})
-  (http-post "/account/adafas/deposit" {:amount 100})
-  (http-post "/account/1/withdraw" {:amount 100})
-  (http-post "/account/1/send" {:amount 100 :account-number 0})
-  (http-post "/garbage" {})
+  (http-post-body "/account" {:name "Mr. Black"})
+  (http-post-body "/account/1/deposit" {:amount 100})
+  (http-post-body "/account/adafas/deposit" {:amount 100})
+  (http-post-body "/account/1/withdraw" {:amount 100})
+  (http-post-body "/account/1/send" {:amount 100 :account-number 0})
+  (http-post-body "/garbage" {})
   )
