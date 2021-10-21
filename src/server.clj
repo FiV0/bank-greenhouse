@@ -65,8 +65,8 @@
     (@server :timeout 100)
     (reset! server nil)))
 
-(defn -main [& args]
-  (reset! server (server/run-server #'app {:port 8080})))
+(defn -main [& {:keys [port] :as _args}]
+  (reset! server (server/run-server #'app {:port (or port 8080)})))
 
 (comment
   (-main)

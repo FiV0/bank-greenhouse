@@ -15,7 +15,7 @@
    (let [{:keys [headers] :as resp} (-> @(http/get (str address endpoint) {:headers {"accept" decoding}})
                                         assoc-string-content-type)]
      (cond-> resp
-       (str/starts-with? (:content-type headers) decoding)
+       (and (:content-type headers) (str/starts-with? (:content-type headers) decoding))
        (assoc :body (m/decode-response-body resp))))))
 
 (defn http-get-body [& args]
@@ -37,7 +37,7 @@
                                                                             :body (m/encode encoding body)})
                                         assoc-string-content-type)]
      (cond-> resp
-       (str/starts-with? (:content-type headers) decoding)
+       (and (:content-type headers) (str/starts-with? (:content-type headers) decoding))
        (assoc :body (m/decode-response-body resp))))))
 
 (defn http-post-body [& args]
@@ -45,6 +45,7 @@
 
 (comment
   (http-post-body "/account" {:name "Mr. Black"})
+  (http-post-body "/account" {})
   (http-post-body "/account/1/deposit" {:amount 100})
   (http-post-body "/account/adafas/deposit" {:amount 100})
   (http-post-body "/account/1/withdraw" {:amount 100})
