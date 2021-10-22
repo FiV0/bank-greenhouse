@@ -2,7 +2,7 @@
 
 Starting the server can be done via
 ```
-clj -M -m server :port 1234
+clj -M -m server :port 8080
 ```
 
 you can then get/post stuff to the endpoints. Either via terminal
@@ -14,7 +14,7 @@ curl -X GET http://localhost:8080/account/0
 ```
 
 or via the repl, see the [client](src/client.clj) namespace.
-```cljojure
+```clojure
 (require '[client])
 (client/http-post "/account" {:name "Mr. foo"})
 (client/http-get "/account/0")
