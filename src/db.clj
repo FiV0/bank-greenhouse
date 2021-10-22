@@ -22,7 +22,7 @@
 (defn stop-xtdb! []
   (when-not (nil? @node)
     (.close @node)
-    (reset! @node nil)))
+    (reset! node nil)))
 
 (defn q [query & args]
   (apply xt/q (xt/db (get-node)) query args))
@@ -31,5 +31,11 @@
   (start-xtdb!)
   (stop-xtdb!)
 
+  (xt/entity-history (xt/db @node) 0 :desc {:with-docs? true})
+
+  (xt/entity-history (xt/db @node) 1 :desc {:with-docs? true})
+
+  (with-open [tx-log-iterator (xt/open-tx-log @node 0 true)]
+    (iterator-seq tx-log-iterator))
 
   )

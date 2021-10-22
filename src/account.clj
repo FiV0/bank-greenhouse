@@ -4,8 +4,6 @@
             [util]
             [xtdb.api :as xt]))
 
-(def audit-log (atom {}))
-
 (defn get-account [id]
   (xt/entity (xt/db (db/get-node)) id))
 
@@ -25,7 +23,6 @@
         node (db/get-node)]
     (xt/submit-tx node [[::xt/put account]])
     (xt/sync node)
-    (swap! audit-log assoc id '())
     (transform-account account)))
 
 (defn amount-check [amount]
@@ -76,37 +73,47 @@
        (throw (Exception. "No such operation!")))
      [false {:reason "No such account!!!"}])))
 
-(defn- keyword->string [kw]
-  (apply str (rest (str kw))))
+(defn contains-user-id? [transactions id]
+  (some (fn [[_op m]] (= id (:xt/id m))) transactions))
 
-(defn- audit-log-sequence-id [id]
-  (-> (get @audit-log id) count))
+(defn get-transactions [id]
+  (with-open [tx-log-iterator (xt/open-tx-log (db/get-node) nil true)]
+    (->> (iterator-seq tx-log-iterator)
+         (filter #(contains-user-id? (:xtdb.api/tx-ops %) id))
+         (map :xtdb.api/tx-ops))))
 
-(defn wrap-account-operation [& [id operation opts :as args]]
-  (let [[success :as res] (apply account-operation args)]
-    (when (and success (#{:deposit :withdraw :send} operation))
-      (let [{:keys [amount account-number]} opts]
-        (case operation
-          (:deposit :withdraw)
-          (swap! audit-log update id conj
-                 {:sequence (audit-log-sequence-id id)
-                  (if (= operation :deposit) :credit :debit) amount
-                  :description (keyword->string operation)})
-          :send
-          (do
-            (swap! audit-log update id conj
-                   {:sequence (audit-log-sequence-id id)
-                    :debit amount
-                    :description (str "send to #" account-number)})
-            (swap! audit-log update account-number conj
-                   {:sequence (audit-log-sequence-id account-number)
-                    :credit amount
-                    :description (str "receive from #" id)})))))
-    res))
+(defn get-snapshots [id]
+  (->> (get-transactions id)
+       (map (fn [ops] (map (fn [[_op data]] data) ops)))))
+
+(defn get-audit-log [id]
+  (let [[previous-snapshot & remaining-snapshots] (get-snapshots id)]
+    (loop [prev (first previous-snapshot) [cur & rem] remaining-snapshots log []]
+      (if (nil? cur)
+        (reverse (map-indexed #(assoc %2 :sequence %1) log))
+        (cond (= 1 (count cur))
+              (let [diff (- (:user/balance (first cur)) (:user/balance prev) )
+                    res (if (pos? diff)
+                          {:credit diff
+                           :description "deposit"}
+                          {:debit (- diff)
+                           :description "withdraw"})]
+                (recur (first cur) rem (conj log res)))
+              (= 2 (count cur))
+              (let [[[account] [other]] ((juxt filter remove) #(= id (:xt/id %)) cur)
+                    diff (- (:user/balance account) (:user/balance prev))
+                    res (if (pos? diff)
+                          {:credit diff
+                           :description (str "receive from #" (:xt/id other))}
+                          {:debit (- diff)
+                           :description (str "send to #" (:xt/id other))})]
+                (recur account rem (conj log res)))
+              :else
+              (throw (Exception. "Should not happen!!!")))))))
 
 (defn account-audit [id]
-  (if-let [log (get @audit-log id)]
-    [true log]
+  (if-let [_account (get-account id)]
+    [true (get-audit-log id)]
     [false {:reason "No such account!!!"}]))
 
 (comment
