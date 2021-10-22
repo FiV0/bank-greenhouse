@@ -1,16 +1,23 @@
-# {project}
+# Bank API
 
-Executing the program can either be done via
+Starting the server can be done via
 ```
-clj -M -m scratch :arg1 :arg2
+clj -M -m server :port 1234
 ```
-or by compiling a jar via
+
+you can then get/post stuff to the endpoints. Either via terminal
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"name":"Mr. foo"}' http://localhost:8080/account
 ```
-clj -T:build clean
-clj -T:build jar
+```bash
+curl -X GET http://localhost:8080/account/0
 ```
-and executing it via
+
+or via the repl, see the [client](src/client.clj) namespace.
+```cljojure
+(require '[client])
+(client/http-post "/account" {:name "Mr. foo"})
+(client/http-get "/account/0")
 ```
-java -jar target/lib-0.1.4.jar :arg1 :arg2
-```
+
 ## License
