@@ -5,15 +5,14 @@
 (def db-path "resources/dev")
 
 (defn start-xtdb! []
-  #_(letfn [(kv-store [dir]
-	      {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
-	                  :db-dir (io/file dir)
-	                  :sync? true}})]
-      (xt/start-node
-       {:xtdb/tx-log (kv-store (str db-path "/tx-log"))
-        :xtdb/document-store (kv-store (str db-path "/doc-store"))
-        :xtdb/index-store (kv-store (str db-path "/index-store"))}))
-  (xt/start-node {}))
+  (letfn [(kv-store [dir]
+	    {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
+	                :db-dir (io/file dir)
+	                :sync? true}})]
+    (xt/start-node
+     {:xtdb/tx-log (kv-store (str db-path "/tx-log"))
+      :xtdb/document-store (kv-store (str db-path "/doc-store"))
+      :xtdb/index-store (kv-store (str db-path "/index-store"))})))
 
 (def node (atom (start-xtdb!)))
 
