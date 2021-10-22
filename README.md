@@ -20,4 +20,12 @@ or via the repl, see the [client](src/client.clj) namespace.
 (client/http-get "/account/0")
 ```
 
+### Tests
+
+Tests can be run via
+```bash
+clojure -M:test -m cognitect.test-runner
+```
+
+
 ## License
