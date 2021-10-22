@@ -16,14 +16,11 @@
 (clojure.test/use-fixtures :once server-and-db-fixture)
 
 (defn db-fixture [f]
-  (let [old-audit-log @account/audit-log
-        old-node @db/node]
-    (reset! account/audit-log {})
+  (let [old-node @db/node]
     (with-open [node (xt/start-node {})]
       (reset! db/node node)
       (f))
-    (reset! db/node old-node)
-    (reset! account/audit-log old-audit-log)))
+    (reset! db/node old-node)))
 
 (clojure.test/use-fixtures :each db-fixture)
 
