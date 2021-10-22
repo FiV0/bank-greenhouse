@@ -2,22 +2,28 @@
   (:require [account]
             [client]
             [clojure.test :refer [deftest is testing]]
+            [db]
             [matcher-combinators.test]
-            [server]))
+            [server]
+            [xtdb.api :as xt]))
 
-(def address "http://localhost:8080")
-
-(defn server-fixture [f]
+(defn server-and-db-fixture [f]
   (server/stop-server)
   (server/-main)
   (f)
   (server/stop-server))
 
-(clojure.test/use-fixtures :once server-fixture)
+(clojure.test/use-fixtures :once server-and-db-fixture)
 
 (defn db-fixture [f]
-  (reset! account/accounts {})
-  (f))
+  (let [old-audit-log @account/audit-log
+        old-node @db/node]
+    (reset! account/audit-log {})
+    (with-open [node (xt/start-node {})]
+      (reset! db/node node)
+      (f))
+    (reset! db/node old-node)
+    (reset! account/audit-log old-audit-log)))
 
 (clojure.test/use-fixtures :each db-fixture)
 
@@ -172,7 +178,6 @@
     (is (match? {:status 400
                  :body {:reason "No such account!!!"}}
                 (client/http-get "/account/asdf/audit")))))
-
 
 (comment
   (clojure.test/run-tests)

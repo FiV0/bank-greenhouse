@@ -1,17 +1,32 @@
 (ns account
-  "A namespace that contains account logic.")
+  "A namespace that contains account logic."
+  (:require [db]
+            [util]
+            [xtdb.api :as xt]))
 
-(def accounts (atom {}))
 (def audit-log (atom {}))
 
+(defn get-account [id]
+  (xt/entity (xt/db (db/get-node)) id))
+
+(defn get-max-account-nb []
+  (->> (xt/q (xt/db (db/get-node)) '{:find [(max id)]
+                                     :where [[id :user/name]]})
+       first first))
+
+(defn transform-account [account]
+  (util/update-keys account {:xt/id :account-number :user/balance :balance :user/name :name}))
+
 (defn new-account [name]
-  (let [id (count @accounts)
-        account {:account-number id
-                 :name name
-                 :balance 0}]
-    (swap! accounts assoc id account)
+  (let [id (if-let [id (get-max-account-nb)] (inc id) 0)
+        account {:xt/id id
+                 :user/name name
+                 :user/balance 0}
+        node (db/get-node)]
+    (xt/submit-tx node [[::xt/put account]])
+    (xt/sync node)
     (swap! audit-log assoc id '())
-    account))
+    (transform-account account)))
 
 (defn amount-check [amount]
   (not (or (nil? amount) (not (number? amount)) (<= amount 0))))
@@ -34,28 +49,30 @@
   :send also needs a valid account number to deposit to."
   ([id operation] (account-operation id operation {}))
   ([id operation {:keys [amount account-number] :as _opts}]
-   (if-let [account (get @accounts id)]
+   (if-let [account (get-account id)]
      (case operation
-       :retrieval [true account]
+       :retrieval [true (transform-account account)]
        (:deposit :withdraw :send)
        (if-not (amount-check amount)
          [false {:reason "No or badly specified amount!!!"}]
-         (let [{:keys [balance] :as updated-account}
-               (update account :balance (if (= operation :deposit) + -) amount)]
+         (let [{:user/keys [balance] :as updated-account}
+               (update account :user/balance (if (= operation :deposit) + -) amount)
+               receiving-account (get-account account-number)
+               node (db/get-node)]
            (cond (< balance 0)
                  [false {:reason "Insufficiant balance!!!"}]
                  (and (= operation :send)
-                      (or (nil? (get @accounts account-number))
+                      (or (nil? receiving-account)
                           (= id account-number)))
                  [false {:reason "Invalid receiving account!!!"}]
                  :else
                  (do
                    (if (= operation :send)
-                     (swap! accounts assoc
-                            id updated-account
-                            account-number (update (get @accounts account-number) :balance + amount))
-                     (swap! accounts assoc id updated-account))
-                   [true updated-account]))))
+                     (xt/submit-tx node [[::xt/put updated-account]
+                                         [::xt/put (update receiving-account :user/balance + amount)]])
+                     (xt/submit-tx node [[::xt/put updated-account]]))
+                   (xt/sync node)
+                   [true (transform-account updated-account)]))))
        (throw (Exception. "No such operation!")))
      [false {:reason "No such account!!!"}])))
 
